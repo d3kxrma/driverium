@@ -2,6 +2,7 @@ from sys import platform
 from zipfile import ZipFile
 import os
 import io
+import json
 
 import chrome_version
 import requests
@@ -100,7 +101,15 @@ class Driverium:
                     zip_ref.extract(file, self.download_path)
                     break
         
-        driver_path = os.path.join(self.download_path, file).replace("/", "\\")
+        driver_path = os.path.join(self.download_path, file)
+        if self.platf == "win64":
+            driver_path = driver_path.replace("/", "\\")
+        
+        data = {"version": ".".join(self.chrome_version),
+                "path": driver_path}
+        
+        with open(os.path.join("\\".join(driver_path.split("\\")[:-1]), "data.json"), "w") as f:
+            json.dump(data, f)
         
         if self.platf == "linux64":
             os.chmod(driver_path, 0o755)
@@ -117,9 +126,16 @@ class Driverium:
             print("Detected Chrome version:", ".".join(self.chrome_version))
         path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platf}")
         if os.path.exists(path_to_driver):
-            for file in os.listdir(path_to_driver):
-                if file.startswith("chromedriver"):
-                    path_to_driver = os.path.join(path_to_driver, file)
+            with open(os.path.join(path_to_driver, "data.json"), "r") as f:
+                data = json.load(f)
+                
+            if data["version"] == ".".join(self.chrome_version):
+                path_to_driver = data["path"]
+            
+            else:
+                os.remove(os.path.join(path_to_driver, "data.json"))
+                os.remove(data["path"])
+                path_to_driver = self.download_driver(self.get_driver_url())
         else:
             url = self.get_driver_url()
             path_to_driver = self.download_driver(url)
