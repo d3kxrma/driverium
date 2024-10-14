@@ -125,7 +125,8 @@ class Driverium:
         if self.logging:
             print("Detected Chrome version:", ".".join(self.chrome_version))
         path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platf}")
-        if os.path.exists(path_to_driver):
+        path_to_data = os.path.join(path_to_driver, "data.json")
+        if os.path.exists(path_to_data):
             with open(os.path.join(path_to_driver, "data.json"), "r") as f:
                 data = json.load(f)
                 
