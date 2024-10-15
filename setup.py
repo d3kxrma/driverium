@@ -10,13 +10,13 @@ classifiers = [
  
 setup(
   name='driverium',
-  version='1.2.1',
+  version='1.2.2',
   description='Python library that provides functionality for managing and downloading ChromeDriver',
   long_description=open('README.md').read(),
   long_description_content_type='text/markdown',
-  url='https://github.com/d3kxrma/captchium',
+  url='https://github.com/d3kxrma/driverium',
   project_urls={
-      "Source": "https://github.com/d3kxrma/captchium"
+      "Source": "https://github.com/d3kxrma/driverium"
   },
   author='dekxrma',
   author_email='qqdjnuxez@gmail.com',
