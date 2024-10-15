@@ -42,8 +42,8 @@ class Driverium:
             
         self.platf = "".join([x for x in platform if x.isalpha()]) + "64"
         self.logging = logging
-        
-    def get_driver_url(self) -> str:
+    
+    def get_new_driver(self) -> str:
         """
         Retrieves the URL of the appropriate driver based on the specified Chrome version and platform.
         Returns:
@@ -81,6 +81,40 @@ class Driverium:
                     if self.logging:
                         print(f"Driver version: {driver['version']}")
                     return dow["url"]
+    
+    def get_old_driver(self) -> str:
+        """
+        Fetches the download URL for the old version of the ChromeDriver based on the current Chrome version.
+        This method constructs the URL for the latest release of the ChromeDriver that matches the major version
+        of the current Chrome browser.
+        Returns:
+            str: The URL to download the ChromeDriver zip file for the specified platform.
+        """
+        
+        formatted_version = ".".join(self.chrome_version[:-1])
+        r = requests.get(f"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{formatted_version}")
+        driver_version = r.text.strip()
+
+        r = requests.get(f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platf}.zip")
+        
+        if r.status_code == 404:
+            return f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{platform}.zip"
+        else:
+            return f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platf}.zip"
+    
+    def get_driver_url(self) -> str:
+        """
+        Determines the appropriate driver URL based on the Chrome version.
+        If the major version of Chrome is 113 or higher, it retrieves the new driver URL.
+        Otherwise, it retrieves the old driver URL.
+        Returns:
+            str: The URL of the appropriate driver.
+        """
+        
+        if int(self.chrome_version[0]) >= 113:
+            return self.get_new_driver()
+        
+        return self.get_old_driver()
                 
     def download_driver(self, url:str) -> str:
         """
@@ -94,15 +128,21 @@ class Driverium:
             zip_bytes = self.progress_download(url)
         else:
             zip_bytes = self.quiet_download(url)
-        
+
         with ZipFile(zip_bytes) as zip_ref:
             for file in zip_ref.namelist():
-                if file.split("/")[1].startswith("chromedriver"):
+                if "/" in file:
+                    file_condition = file.split("/")[-1]
+                else:
+                    file_condition = file
+                if file_condition.startswith("chromedriver"):
+                    if "/" not in file:
+                        self.download_path = os.path.join(self.download_path, f"chromedriver-{self.platf}")
                     zip_ref.extract(file, self.download_path)
                     break
         
         driver_path = os.path.join(self.download_path, file)
-        if self.platf == "win64":
+        if "win" in self.platf:
             driver_path = driver_path.replace("/", "\\")
         
         data = {"version": ".".join(self.chrome_version),
@@ -111,7 +151,7 @@ class Driverium:
         with open(os.path.join("\\".join(driver_path.split("\\")[:-1]), "data.json"), "w") as f:
             json.dump(data, f)
         
-        if self.platf == "linux64":
+        if "linux" in self.platf:
             os.chmod(driver_path, 0o755)
     
         return driver_path
@@ -138,8 +178,8 @@ class Driverium:
                 os.remove(data["path"])
                 path_to_driver = self.download_driver(self.get_driver_url())
         else:
-            url = self.get_driver_url()
-            path_to_driver = self.download_driver(url)
+            path_to_driver = self.download_driver(self.get_driver_url())
+            
         if self.logging:
             print("Driver path:", path_to_driver)
         return path_to_driver

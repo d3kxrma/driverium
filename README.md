@@ -43,6 +43,14 @@ Retrieves the path to the ChromeDriver. If the driver is not found, it will down
 
 Retrieves the URL of the ChromeDriver based on the specified Chrome version.
 
+#### `get_new_driver() -> str`
+
+Retrieves the path to the latest version of the ChromeDriver.
+
+#### `get_old_driver() -> str`
+
+Retrieves the path to an older version of the ChromeDriver.
+
 #### `download_driver(url: str) -> str`
 
 Downloads the ChromeDriver from the specified URL and returns the path to the downloaded driver.

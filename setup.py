@@ -10,7 +10,7 @@ classifiers = [
  
 setup(
   name='driverium',
-  version='1.1.1',
+  version='1.2.1',
   description='Python library that provides functionality for managing and downloading ChromeDriver',
   long_description=open('README.md').read(),
   long_description_content_type='text/markdown',
