@@ -1,3 +1,4 @@
+[![PyPI Downloads](https://static.pepy.tech/badge/driverium)](https://pepy.tech/projects/driverium)
 # Driverium
 
 Driverium is a Python library that provides functionality for managing and downloading ChromeDriver for different Chrome versions.
