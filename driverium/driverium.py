@@ -1,12 +1,13 @@
-from sys import platform
-from zipfile import ZipFile
 import os
 import io
 import json
+import logging
+
+from sys import platform
+from zipfile import ZipFile
 
 import chrome_version
 import requests
-from tqdm import tqdm
 
 class Driverium:
     """
@@ -14,7 +15,7 @@ class Driverium:
     Args:
         browser_version (str, optional): The version of the Chrome browser. If not provided, it will use the current installed version. Defaults to None.
         download_path (str, optional): The path where the ChromeDriver will be downloaded. If not provided, it will use the current working directory. Defaults to None.
-        logging (bool, optional): Flag indicating whether to enable logging. Defaults to False.
+        logging_enabled (bool, optional): Flag indicating whether to enable logging. Defaults to False.
     Methods:
         get_driver_url() -> str:
             Retrieves the URL of the ChromeDriver based on the specified Chrome version.
@@ -28,20 +29,36 @@ class Driverium:
             Downloads the file from the specified URL and displays progress using a progress bar.
     """
     
-    def __init__(self, browser_version:str = None, download_path:str = None, logging:bool = False):
+    def __init__(self, browser_version:str = None, download_path:str = None, logging_enabled:bool = False):
+        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        if logging_enabled:
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s - %(levelname)s - %(message)s",
+                datefmt="%d-%m-%Y %H:%M:%S",
+            )
+        else:
+            self.logger.disabled = True
         
         if browser_version is None:
-            self.chrome_version = chrome_version.get_chrome_version().split(".")
+            browser_version = chrome_version.get_chrome_version()
+            self.chrome_version = browser_version.split(".")
         else:
             self.chrome_version = browser_version.split(".")
-            
+        
+        self.logger.info("Detected Chrome version: %s", browser_version)
+        
         if download_path is None:
             self.download_path = os.getcwd()
         else:
             self.download_path = download_path
-            
+        
+        self.logger.info("Download path: %s", self.download_path)
+        
         self.platf = "".join([x for x in platform if x.isalpha()]) + "64"
-        self.logging = logging
+        
+        self.logger.info("Platform: %s", self.platf)
     
     def get_new_driver(self) -> str:
         """
@@ -78,8 +95,7 @@ class Driverium:
         for driver in driver_versions:
             for dow in driver["downloads"]["chromedriver"]:
                 if dow["platform"] == self.platf:
-                    if self.logging:
-                        print(f"Driver version: {driver['version']}")
+                    self.logger.info("Detected driver version: %s", driver["version"])
                     return dow["url"]
     
     def get_old_driver(self) -> str:
@@ -124,10 +140,11 @@ class Driverium:
         Returns:
             str: The path to the downloaded driver.
         """
-        if self.logging:
-            zip_bytes = self.progress_download(url)
-        else:
-            zip_bytes = self.quiet_download(url)
+        self.logger.info("Downloading driver from URL: %s", url)
+            
+        zip_bytes = self.quiet_download(url)
+        
+        self.logger.info("Extracting driver...")
 
         with ZipFile(zip_bytes) as zip_ref:
             for file in zip_ref.namelist():
@@ -162,26 +179,29 @@ class Driverium:
         Returns:
             str: The path to the Chrome driver.
         """
-        if self.logging:
-            print("Detected Chrome version:", ".".join(self.chrome_version))
+        
         path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platf}")
         path_to_data = os.path.join(path_to_driver, "data.json")
         if os.path.exists(path_to_data):
+            self.logger.info("Data file found")
             with open(os.path.join(path_to_driver, "data.json"), "r") as f:
                 data = json.load(f)
                 
             if data["version"] == ".".join(self.chrome_version):
                 path_to_driver = data["path"]
-            
+                self.logger.info("Current version of the driver satisfies the requirements")
+                
             else:
+                self.logger.info("Current version of the driver does not satisfy the requirements")
                 os.remove(os.path.join(path_to_driver, "data.json"))
                 os.remove(data["path"])
                 path_to_driver = self.download_driver(self.get_driver_url())
         else:
+            self.logger.info("Data file not found")
             path_to_driver = self.download_driver(self.get_driver_url())
             
-        if self.logging:
-            print("Driver path:", path_to_driver)
+        self.logger.info("Path to driver: %s", path_to_driver)
+        
         return path_to_driver
 
     def quiet_download(self, url:str) -> io.BytesIO:
@@ -194,28 +214,7 @@ class Driverium:
         """
         r = requests.get(url)
         return io.BytesIO(r.content)
-    
-    def progress_download(self, url:str) -> io.BytesIO:
-        """
-        Downloads a file from the given URL and tracks the progress using a progress bar.
-        Args:
-            url (str): The URL of the file to download.
-        Returns:
-            io.BytesIO: The downloaded file as a BytesIO object.
-        """
-        response = requests.get(url, stream=True)
-        total_size = int(response.headers.get('content-length', 0))
 
-        zip_bytes = io.BytesIO()
-        
-        with tqdm(total=total_size, unit='B', unit_scale=True, desc='driver download', initial=0, ascii=True) as pbar:
-            for data in response.iter_content(1024):
-                zip_bytes.write(data)
-                pbar.update(len(data))
-
-        zip_bytes.seek(0)
-        
-        return zip_bytes
 if __name__ == "__main__":
-    d = Driverium(logging=True)
+    d = Driverium(logging_enabled=True)
     print(d.get_driver())

@@ -10,7 +10,7 @@ classifiers = [
  
 setup(
   name='driverium',
-  version='1.2.2',
+  version='1.2.3',
   description='Python library that provides functionality for managing and downloading ChromeDriver',
   long_description=open('README.md').read(),
   long_description_content_type='text/markdown',
@@ -24,5 +24,5 @@ setup(
   classifiers=classifiers,
   keywords='python, selenium, webdriver, chromedriver',
   packages=find_packages(),
-  install_requires=['requests', 'chrome-version', 'tqdm'] 
+  install_requires=['requests', 'chrome-version'] 
 )

@@ -59,10 +59,6 @@ Downloads the ChromeDriver from the specified URL and returns the path to the do
 
 Downloads the file from the specified URL without displaying progress.
 
-#### `progress_download(url: str) -> io.BytesIO`
-
-Downloads the file from the specified URL and displays progress using a progress bar.
-
 
 ## Contributing
 
