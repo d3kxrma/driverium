@@ -1,6 +1,6 @@
 import os
 import io
-import json
+import shutil
 import logging
 
 from sys import platform
@@ -162,11 +162,8 @@ class Driverium:
         if "win" in self.platf:
             driver_path = driver_path.replace("/", "\\")
         
-        data = {"version": ".".join(self.chrome_version),
-                "path": driver_path}
-        
-        with open(os.path.join("\\".join(driver_path.split("\\")[:-1]), "data.json"), "w") as f:
-            json.dump(data, f)
+        with open(os.path.join(self.download_path, f"chromedriver-{self.platf}", "version"), "w") as f:
+            f.write(".".join(self.chrome_version))
         
         if "linux" in self.platf:
             os.chmod(driver_path, 0o755)
@@ -181,22 +178,27 @@ class Driverium:
         """
         
         path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platf}")
-        path_to_data = os.path.join(path_to_driver, "data.json")
+        path_to_data = os.path.join(path_to_driver, "version")
         if os.path.exists(path_to_data):
             self.logger.info("Data file found")
-            with open(os.path.join(path_to_driver, "data.json"), "r") as f:
-                data = json.load(f)
+            with open(os.path.join(path_to_driver, "version"), "r") as f:
+                version = f.read().replace("\n", "").strip()
                 
-            if data["version"] == ".".join(self.chrome_version):
-                path_to_driver = data["path"]
+            if version == ".".join(self.chrome_version):
+                for file in os.listdir(path_to_driver):
+                    if file.startswith("chromedriver"):
+                        path_to_driver = os.path.join(path_to_driver, file)
+                        break
                 self.logger.info("Current version of the driver satisfies the requirements")
                 
             else:
                 self.logger.info("Current version of the driver does not satisfy the requirements")
-                os.remove(os.path.join(path_to_driver, "data.json"))
-                os.remove(data["path"])
+                shutil.rmtree(path_to_driver)
                 path_to_driver = self.download_driver(self.get_driver_url())
         else:
+            if os.path.exists(path_to_driver):
+                shutil.rmtree(path_to_driver)
+                
             self.logger.info("Data file not found")
             path_to_driver = self.download_driver(self.get_driver_url())
             
