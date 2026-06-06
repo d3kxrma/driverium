@@ -2,8 +2,9 @@ import os
 import io
 import shutil
 import logging
+import platform
 
-from sys import platform
+from typing import Literal
 from zipfile import ZipFile
 
 import chrome_version
@@ -29,7 +30,7 @@ class Driverium:
             Downloads the file from the specified URL and displays progress using a progress bar.
     """
     
-    def __init__(self, browser_version:str = None, download_path:str = None, logging_enabled:bool = False):
+    def __init__(self, browser_version:str = None, platform: Literal['linux64', 'mac-arm64', 'mac-x64', 'win32', 'win64'] = None,  download_path:str = None, logging_enabled:bool = False):
         
         self.logger = logging.getLogger(self.__class__.__name__)
         if logging_enabled:
@@ -56,9 +57,30 @@ class Driverium:
         
         self.logger.info("Download path: %s", self.download_path)
         
-        self.platf = "".join([x for x in platform if x.isalpha()]) + "64"
+        if platform:
+            self.platform = platform
+        else:
+            self.platform = self.get_platform()
         
-        self.logger.info("Platform: %s", self.platf)
+        self.logger.info("Platform: %s", self.platform)
+    
+    def get_platform(self) -> str:
+        info = platform.uname()
+        
+        if info.system == 'Linux':
+            return 'linux64'
+        
+        if info.system == 'Windows':
+            if platform.architecture()[0] == '64bit':
+                return 'win64'
+            else:
+                return 'win32'
+        
+        if info.system == 'Darwin':
+            if platform.architecture()[0] == '64bit':
+                return 'mac-arm64'
+            else:
+                return 'mac-x64'
     
     def get_new_driver(self) -> str:
         """
@@ -94,7 +116,7 @@ class Driverium:
         
         for driver in driver_versions:
             for dow in driver["downloads"]["chromedriver"]:
-                if dow["platform"] == self.platf:
+                if dow["platform"] == self.platform:
                     self.logger.info("Detected driver version: %s", driver["version"])
                     return dow["url"]
     
@@ -111,12 +133,12 @@ class Driverium:
         r = requests.get(f"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_{formatted_version}")
         driver_version = r.text.strip()
 
-        r = requests.get(f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platf}.zip")
+        r = requests.get(f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platform}.zip")
         
         if r.status_code == 404:
             return f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{platform}.zip"
         else:
-            return f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platf}.zip"
+            return f"https://chromedriver.storage.googleapis.com/{driver_version}/chromedriver_{self.platform}.zip"
     
     def get_driver_url(self) -> str:
         """
@@ -154,18 +176,18 @@ class Driverium:
                     file_condition = file
                 if file_condition.startswith("chromedriver"):
                     if "/" not in file:
-                        self.download_path = os.path.join(self.download_path, f"chromedriver-{self.platf}")
+                        self.download_path = os.path.join(self.download_path, f"chromedriver-{self.platform}")
                     zip_ref.extract(file, self.download_path)
                     break
         
         driver_path = os.path.join(self.download_path, file)
-        if "win" in self.platf:
+        if "win" in self.platform:
             driver_path = driver_path.replace("/", "\\")
         
-        with open(os.path.join(self.download_path, f"chromedriver-{self.platf}", "version"), "w") as f:
+        with open(os.path.join(self.download_path, f"chromedriver-{self.platform}", "version"), "w") as f:
             f.write(".".join(self.chrome_version))
         
-        if "linux" in self.platf:
+        if "win" not in self.platform:
             os.chmod(driver_path, 0o755)
     
         return driver_path
@@ -177,7 +199,7 @@ class Driverium:
             str: The path to the Chrome driver.
         """
         
-        path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platf}")
+        path_to_driver = os.path.join(self.download_path, f"chromedriver-{self.platform}")
         path_to_data = os.path.join(path_to_driver, "version")
         if os.path.exists(path_to_data):
             self.logger.info("Data file found")
